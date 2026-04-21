@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { Link } from 'react-router-dom';
 import ReviewCard from '../components/ReviewCard';
 
 const LandingPage = () => {
-  // Dummy data for owners approval
+  // Intersection Observer for the smooth reveal animations
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('animate-active');
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   const dummyReviews = [
     {
       id: 1,
@@ -30,17 +41,30 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className="min-h-screen bg-[#032b7a] font-sans text-white selection:bg-[#f4b41a] selection:text-[#032b7a]">
+      <Navbar />
 
-      <main className="max-w-7xl mx-auto px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center pt-12 pb-20">
+              <div className="bg-shape shape1 opacity-20"></div>
+              <div className="bg-shape shape2 opacity-10"></div>
+              <div className="bg-shape shape3 opacity-20"></div>
+              <div className="gold-line gold-line1 opacity-30"></div>
+              <div className="gold-line gold-line2 opacity-30"></div>
+
+      {/* Hero Section */}
+      <main className="max-w-7xl mx-auto px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center pt-32 pb-20 relative">
+        {/* Decorative Background Glow */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]" />
+        </div>
+
         {/* Left Side: Text & Search */}
-        <div className="space-y-10 animate-fade-in">
-          <h1 className="text-7xl font-extrabold text-gray-900 leading-[1.1]">
-            You learn <br /> today & <span className="text-blue-700">earn</span> <br /> tomorrow.
+        <div className="space-y-10 animate-on-scroll slide-up relative z-10">
+          <h1 className="text-7xl font-black text-white leading-[1.1] uppercase tracking-tighter">
+            You learn <br /> today & <span className="text-[#f4b41a]">earn</span> <br /> tomorrow.
           </h1>
 
           <div className="relative max-w-md group">
-            <span className="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-blue-600">
+            <span className="absolute inset-y-0 left-4 flex items-center text-blue-200/50 group-focus-within:text-[#f4b41a]">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -48,60 +72,86 @@ const LandingPage = () => {
             <input
               type="text"
               placeholder="Search your course"
-              className="w-full py-5 pl-14 pr-6 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none transition-all shadow-sm"
+              className="w-full py-5 pl-14 pr-6 bg-white/5 border-2 border-white/10 rounded-2xl focus:bg-white/10 focus:border-[#f4b41a] outline-none transition-all text-white placeholder:text-blue-200/30"
             />
           </div>
 
-          <p className="text-gray-500 text-lg">
-            Are you already member of colas? <Link to="/login" className="underline font-bold text-black hover:text-blue-700 transition">Log in</Link>
+          <p className="text-blue-100/60 text-lg font-medium">
+            Are you already member? <Link to="/login" className="underline font-bold text-[#f4b41a] hover:text-white transition">Log in</Link>
           </p>
         </div>
 
         {/* Right Side: Visual Collage */}
-        <div className="grid grid-cols-3 grid-rows-3 gap-4 h-[550px]">
-          <div className="bg-yellow-400 rounded-full scale-90"></div>
-          <div className="bg-pink-100 rounded-2xl"></div>
-          <div className="bg-gray-100 rounded-2xl overflow-hidden shadow-lg"><img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400" className="object-cover h-full w-full" alt="Commerce"/></div>
-          <div className="col-span-2 bg-blue-50 rounded-2xl overflow-hidden relative group">
-            <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600" className="object-cover h-full w-full group-hover:scale-105 transition duration-500" alt="Management"/>
-            <div className="absolute top-4 left-4 bg-yellow-300 px-4 py-1 font-bold -rotate-2">COMMERCE</div>
+        <div className="grid grid-cols-3 grid-rows-3 gap-4 h-[550px] animate-on-scroll slide-up relative z-10" style={{ transitionDelay: '200ms' }}>
+          <div className="bg-[#f4b41a] rounded-full scale-90 shadow-[0_0_30px_rgba(244,180,26,0.2)]"></div>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/10"></div>
+          <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/10"><img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400" className="object-cover h-full w-full grayscale hover:grayscale-0 transition duration-500" alt="Commerce"/></div>
+          <div className="col-span-2 bg-white/5 rounded-2xl overflow-hidden relative group border border-white/10">
+            <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600" className="object-cover h-full w-full opacity-60 group-hover:scale-105 group-hover:opacity-100 transition duration-700" alt="Management"/>
+            <div className="absolute top-4 left-4 bg-[#f4b41a] text-[#032b7a] px-4 py-1 font-black -rotate-2 text-xs">COMMERCE</div>
           </div>
-          <div className="bg-red-500 rounded-full scale-75"></div>
-          <div className="bg-cyan-400 rounded-full scale-95"></div>
-          <div className="bg-orange-50 rounded-br-[80px] rounded-tl-2xl"></div>
-          <div className="bg-gray-800 rounded-2xl overflow-hidden relative shadow-2xl">
-            <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400" className="object-cover h-full w-full opacity-70" alt="Accounting"/>
-            <div className="absolute bottom-4 left-4 text-white text-xs font-black uppercase tracking-[0.2em]">Finance</div>
+          <div className="bg-pink-500/20 rounded-full scale-75 blur-sm"></div>
+          <div className="bg-cyan-400/20 rounded-full scale-95 border border-cyan-400/30"></div>
+          <div className="bg-white/5 rounded-br-[80px] rounded-tl-2xl border border-white/10"></div>
+          <div className="bg-white/5 rounded-2xl overflow-hidden relative border border-white/10">
+            <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400" className="object-cover h-full w-full opacity-40" alt="Accounting"/>
+            <div className="absolute bottom-4 left-4 text-[#f4b41a] text-[10px] font-black uppercase tracking-[0.2em]">Finance</div>
           </div>
         </div>
       </main>
 
       {/* Review Section */}
-      <section className="bg-gray-50 py-24 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">
-              What Our Community Says
-            </h2>
-            <div className="w-20 h-1.5 bg-blue-700 mx-auto rounded-full"></div>
-          </div>
+      <section className="bg-[#021b4d] py-32 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-12 relative z-10">
+          <div className="flex flex-col lg:flex-row gap-16 items-start">
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {dummyReviews.map((rev) => (
-              <ReviewCard
-                key={rev.id}
-                name={rev.name}
-                role={rev.role}
-                rating={rev.rating}
-                comment={rev.comment}
-              />
-            ))}
+            {/* Left: Dummy Reviews Grid */}
+            <div className="w-full lg:w-2/3">
+              <div className="mb-12 animate-on-scroll">
+                <h2 className="text-4xl font-black text-white uppercase tracking-tighter">
+                  What Our <span className="text-[#f4b41a]">Community</span> Says
+                </h2>
+                <div className="w-20 h-1.5 bg-[#f4b41a] mt-4 rounded-full"></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {dummyReviews.map((rev, index) => (
+                  <div key={rev.id} className="animate-on-scroll slide-up" style={{ transitionDelay: `${index * 100}ms` }}>
+                    <div className="bg-white/[0.03] border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-md hover:bg-white/[0.07] transition-all">
+                      <ReviewCard {...rev} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Write Review Form */}
+            <div className="w-full lg:w-1/3 animate-on-scroll slide-up" style={{ transitionDelay: '300ms' }}>
+              <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[3rem] backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#f4b41a]/10 rounded-full blur-[60px]" />
+
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Post a <span className="text-[#f4b41a]">Review</span></h3>
+                <p className="text-[10px] text-blue-200/60 font-black uppercase tracking-[0.2em] mb-8">Tell us about your session</p>
+
+                <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                  <input type="text" placeholder="Your Name" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm outline-none focus:border-[#f4b41a] transition-all" />
+                  <select className="w-full bg-[#032b7a] border border-white/10 rounded-2xl px-6 py-4 text-sm text-blue-100 outline-none focus:border-[#f4b41a] cursor-pointer">
+                    <option>Student</option>
+                    <option>Institution</option>
+                  </select>
+                  <textarea rows="4" placeholder="How was your experience?" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm outline-none focus:border-[#f4b41a] transition-all resize-none"></textarea>
+                  <button className="w-full bg-[#f4b41a] text-[#032b7a] py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white transition-all active:scale-95 shadow-lg shadow-yellow-900/20">
+                    Submit Review
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <footer className="max-w-6xl mx-auto px-12 py-12 flex flex-wrap justify-between items-center border-t border-gray-100 gap-8">
+      <footer className="max-w-7xl mx-auto px-12 py-16 flex flex-wrap justify-between items-center border-t border-white/10 gap-8 animate-on-scroll">
         <StatItem icon="👥" title="150+ from the world's" sub="best areas" />
         <StatItem icon="📺" title="20+ master lessons" sub="avg per class" />
         <StatItem icon="🕒" title="10 Minutes average" sub="per lesson" />
@@ -112,10 +162,10 @@ const LandingPage = () => {
 
 const StatItem = ({ icon, title, sub }) => (
   <div className="flex items-center space-x-4">
-    <div className="text-3xl grayscale">{icon}</div>
+    <div className="text-3xl filter brightness-200">{icon}</div>
     <div>
-      <p className="font-bold text-gray-900">{title}</p>
-      <p className="text-sm text-gray-400">{sub}</p>
+      <p className="font-black text-white uppercase text-sm tracking-tight">{title}</p>
+      <p className="text-xs font-bold text-blue-200/40 uppercase tracking-widest">{sub}</p>
     </div>
   </div>
 );

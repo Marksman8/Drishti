@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../SupabaseClient';
+import { useNavigate } from 'react-router-dom';
 import './AuthPage.css';
 import Navbar from '../components/Navbar';
 import amritaBg from '../components/Amritacollege.jpg';
 
 const AuthPage = () => {
+  const navigate = useNavigate();
   const [isSchoolMode, setIsSchoolMode] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+
+  // --- FORM STATES ---
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -18,9 +27,57 @@ const AuthPage = () => {
     return () => observer.disconnect();
   }, []);
 
+  // --- AUTH LOGIC ---
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const role = isSchoolMode ? 'INSTITUTION' : 'STUDENT';
+
+    try {
+      if (isRegistering) {
+        // REGISTER LOGIC
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: role,
+            },
+          },
+        });
+        if (error) throw error;
+        alert("Registration successful! Please check your email for a verification link.");
+      } else {
+        // LOGIN LOGIC
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+
+        // On success, navigate to the course selection page
+        navigate('/course');
+      }
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper to clear inputs when switching modes
+  const toggleMode = (schoolMode) => {
+    setIsSchoolMode(schoolMode);
+    setIsRegistering(false);
+    setEmail('');
+    setPassword('');
+    setFullName('');
+  };
+
   return (
     <div className="auth-page-wrapper min-h-screen relative flex flex-col">
-      {/* BACKGROUND IMAGE LAYER */}
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -31,7 +88,6 @@ const AuthPage = () => {
         }}
       ></div>
 
-      {/* TINT OVERLAY - Lightened so you can actually see the image */}
       <div className="absolute inset-0 bg-[#032b7a]/50 backdrop-blur-[1px] z-1"></div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -42,23 +98,29 @@ const AuthPage = () => {
 
             {/* --- STUDENT SIDE --- */}
             <div className="form-container student-login-container">
-              <form className="auth-form bg-[#f8f5ee]" onSubmit={(e) => e.preventDefault()}>
+              <form className="auth-form bg-[#f8f5ee]" onSubmit={handleAuth}>
                 <h1 className="text-3xl font-black mb-2 text-[#032b7a] uppercase tracking-tighter">
                     {isRegistering ? "Student Register" : "Student Login"}
                 </h1>
                 <div className="w-16 h-1 bg-[#f4b41a] mb-8 rounded-full"></div>
 
                 {isRegistering && (
-                  <>
-                    <input type="text" placeholder="Full Name" className="auth-input" />
-                    <input type="email" placeholder="Email Address" className="auth-input" />
-                  </>
+                  <input
+                    type="text" placeholder="Full Name" className="auth-input"
+                    value={fullName} onChange={(e) => setFullName(e.target.value)} required
+                  />
                 )}
-                <input type="text" placeholder="Username" className="auth-input" />
-                <input type="password" placeholder="Password" className="auth-input" />
+                <input
+                  type="email" placeholder="Email Address" className="auth-input"
+                  value={email} onChange={(e) => setEmail(e.target.value)} required
+                />
+                <input
+                  type="password" placeholder="Password" className="auth-input"
+                  value={password} onChange={(e) => setPassword(e.target.value)} required
+                />
 
-                <button className="auth-button bg-[#032b7a] text-white hover:scale-105 transition-transform">
-                    {isRegistering ? "SIGN UP" : "LOG IN"}
+                <button disabled={loading} className="auth-button bg-[#032b7a] text-white hover:scale-105 transition-transform">
+                    {loading ? "PROCESSING..." : (isRegistering ? "SIGN UP" : "LOG IN")}
                 </button>
 
                 <p className="mt-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]" onClick={() => setIsRegistering(!isRegistering)}>
@@ -69,23 +131,29 @@ const AuthPage = () => {
 
             {/* --- INSTITUTION SIDE --- */}
             <div className="form-container teacher-login-container">
-              <form className="auth-form bg-[#f8f5ee]" onSubmit={(e) => e.preventDefault()}>
+              <form className="auth-form bg-[#f8f5ee]" onSubmit={handleAuth}>
                 <h1 className="text-3xl font-black mb-2 text-[#032b7a] uppercase tracking-tighter">
                     {isRegistering ? "Institution Register" : "Institution Login"}
                 </h1>
                 <div className="w-16 h-1 bg-[#f4b41a] mb-8 rounded-full"></div>
 
                 {isRegistering && (
-                  <>
-                    <input type="text" placeholder="Institution Name" className="auth-input" />
-                    <input type="email" placeholder="Official Email" className="auth-input" />
-                  </>
+                  <input
+                    type="text" placeholder="Institution Name" className="auth-input"
+                    value={fullName} onChange={(e) => setFullName(e.target.value)} required
+                  />
                 )}
-                <input type="text" placeholder="Username" className="auth-input" />
-                <input type="password" placeholder="Password" className="auth-input" />
+                <input
+                  type="email" placeholder="Official Email" className="auth-input"
+                  value={email} onChange={(e) => setEmail(e.target.value)} required
+                />
+                <input
+                  type="password" placeholder="Password" className="auth-input"
+                  value={password} onChange={(e) => setPassword(e.target.value)} required
+                />
 
-                <button className="auth-button bg-[#032b7a] text-white hover:scale-105 transition-transform">
-                    {isRegistering ? "REGISTER" : "LOG IN"}
+                <button disabled={loading} className="auth-button bg-[#032b7a] text-white hover:scale-105 transition-transform">
+                    {loading ? "PROCESSING..." : (isRegistering ? "REGISTER" : "LOG IN")}
                 </button>
 
                 <p className="mt-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]" onClick={() => setIsRegistering(!isRegistering)}>
@@ -100,14 +168,14 @@ const AuthPage = () => {
                 <div className="overlay-panel overlay-left">
                   <h1 className="text-4xl font-black text-[#f4b41a] uppercase tracking-tighter">Welcome Back!</h1>
                   <p className="my-6 text-sm text-blue-100 font-medium">To keep connected with us please login with your student info</p>
-                  <button className="ghost-button" onClick={() => {setIsSchoolMode(false); setIsRegistering(false);}}>
+                  <button className="ghost-button" onClick={() => toggleMode(false)}>
                     STUDENT LOGIN
                   </button>
                 </div>
                 <div className="overlay-panel overlay-right">
                   <h1 className="text-4xl font-black text-[#f4b41a] uppercase tracking-tighter">Hello, Welcome!</h1>
                   <p className="my-6 text-sm text-blue-100 font-medium">Are you looking to manage your institution?</p>
-                  <button className="ghost-button" onClick={() => {setIsSchoolMode(true); setIsRegistering(false);}}>
+                  <button className="ghost-button" onClick={() => toggleMode(true)}>
                     INSTITUTION LOGIN
                   </button>
                 </div>

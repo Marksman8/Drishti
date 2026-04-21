@@ -13,7 +13,15 @@
   --font-hero: 'Poppins', sans-serif;
   --font-body: 'Inter', sans-serif;
 }
-/* --- Global Drishti Theme Colors --- */
+
+/* This kills the white background globally */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background-color: #032b7a; /* Use your exact Navy/Slate hex here */
+  min-height: 100%;
+}
+
 :root {
   --drishti-navy: #032b7a;
   --drishti-gold: #f4b41a;
