@@ -14,6 +14,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/public/**").permitAll() // Home page, public reviews
+                        .requestMatchers("/api/bookings/**").permitAll() // Allow booking endpoints for development
+                        .requestMatchers("/api/chat/**").permitAll() // Allow chat endpoint
                         .requestMatchers("/api/student/**").hasAuthority("APPROLE_STUDENT")
                         .requestMatchers("/api/institution/**").hasAuthority("APPROLE_INSTITUTION")
                         .anyRequest().authenticated()

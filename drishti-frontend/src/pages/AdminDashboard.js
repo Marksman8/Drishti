@@ -29,15 +29,34 @@ const AdminDashboard = () => {
   const fetchInitialData = async () => {
     setLoading(true);
 
-    // 1. Fetch School Requests
-    const { data: reqs } = await supabase.from('institution_requests').select('*').eq('status', 'Pending');
-    if (reqs) setPendingRequests(reqs);
+    // 1. Fetch School Requests from Spring Boot Controller
+    try {
+      const resp = await fetch('http://localhost:8080/api/bookings/pending');
+      if (resp.ok) {
+        const data = await resp.json();
+        setPendingRequests(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch pending requests", err);
+    }
 
     // 2. Fetch Existing Courses (to populate dropdowns)
     const { data: crs } = await supabase.from('courses').select('*');
     if (crs) setExistingCourses(crs);
 
     setLoading(false);
+  };
+
+  const fetchPendingRequests = async () => {
+    try {
+      const resp = await fetch('http://localhost:8080/api/bookings/pending');
+      if (resp.ok) {
+        const data = await resp.json();
+        setPendingRequests(data);
+      }
+    } catch (err) {
+      console.error("Failed to refresh pending requests", err);
+    }
   };
 
   // --- HANDLERS ---
@@ -61,18 +80,47 @@ const AdminDashboard = () => {
   };
 
   // 2. Approve Institutional Request
-  const handleApprove = async (schoolName) => {
-    if (!chosenDate) return alert("Please select a date first!");
-    const { error } = await supabase
-      .from('institution_requests')
-      .update({ status: 'Approved', approved_date: chosenDate, admin_comment: adminMessage })
-      .eq('id', selectedRequestId);
+  const approveRequest = async (id, gMeetLink) => {
+    const response = await fetch(`http://localhost:8080/api/bookings/approve/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meetingLink: gMeetLink })
+    });
 
-    if (!error) {
-      alert(`APPROVED: ${schoolName} confirmed for ${chosenDate}.`);
-      setPendingRequests(pendingRequests.filter(r => r.id !== selectedRequestId));
+    if (response.ok) {
+      alert("Request Approved!");
+      fetchPendingRequests();
       setSelectedRequestId(null);
-      setChosenDate("");
+      setAdminMessage("");
+    }
+  };
+
+  // 2b. Reject Institutional Request
+  const rejectRequest = async (id) => {
+    if (!window.confirm("Are you sure you want to reject this request?")) return;
+
+    const response = await fetch(`http://localhost:8080/api/bookings/reject/${id}`, {
+      method: 'PATCH'
+    });
+
+    if (response.ok) {
+      alert("Request Rejected!");
+      fetchPendingRequests();
+      setSelectedRequestId(null);
+    }
+  };
+
+  // 2c. Update Status to Processing
+  const setProcessing = async (id) => {
+    const response = await fetch(`http://localhost:8080/api/bookings/status/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'PROCESSING' })
+    });
+
+    if (response.ok) {
+      alert("Request set to Processing!");
+      fetchPendingRequests();
     }
   };
 
@@ -117,28 +165,49 @@ const AdminDashboard = () => {
                 {selectedRequestId && (
                   <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white animate-in zoom-in">
                     <p className="text-[10px] font-black uppercase text-blue-400 mb-2">Reviewing</p>
-                    <h4 className="font-bold text-lg mb-6 leading-tight">{pendingRequests.find(r => r.id === selectedRequestId)?.school_name}</h4>
-                    <button onClick={() => handleApprove(pendingRequests.find(r => r.id === selectedRequestId).school_name)} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-xs">Confirm & Approve</button>
+                    <h4 className="font-bold text-lg mb-4 leading-tight">{pendingRequests.find(r => r.id === selectedRequestId)?.schoolName || pendingRequests.find(r => r.id === selectedRequestId)?.school_name}</h4>
+                    <input
+                      className="w-full bg-slate-800 p-3 rounded-xl mb-4 text-sm"
+                      placeholder="Google Meet Link..."
+                      value={adminMessage}
+                      onChange={e => setAdminMessage(e.target.value)}
+                    />
+                    <button onClick={() => approveRequest(selectedRequestId, adminMessage)} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-xs">Confirm & Approve</button>
                   </div>
                 )}
               </div>
               <div className="lg:col-span-3 overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 font-black text-[10px] uppercase text-slate-400">
-                    <tr><th className="p-6">Institution</th><th className="p-6">Preferred Dates</th><th className="p-6">Message</th></tr>
+                    <tr><th className="p-6">Institution</th><th className="p-6">Details</th><th className="p-6">Actions</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-sm">
                     {pendingRequests.map(req => (
-                      <tr key={req.id} className={selectedRequestId === req.id ? "bg-blue-50/40" : ""}>
-                        <td className="p-6 font-bold">{req.school_name}<br/><span className="text-blue-600 text-[10px] uppercase">{req.course_name}</span></td>
+                      <tr key={req.id} onClick={() => setSelectedRequestId(req.id)} className={`cursor-pointer ${selectedRequestId === req.id ? "bg-blue-50/40" : ""}`}>
+                        <td className="p-6 font-bold">{req.schoolName || req.school_name}<br/><span className="text-blue-600 text-[10px] uppercase">{req.courseName || req.course_name}</span></td>
                         <td className="p-6">
-                          <div className="flex flex-wrap gap-2">
-                            {req.preferred_dates?.map(d => (
-                              <button key={d} onClick={() => {setSelectedRequestId(req.id); setChosenDate(d);}} className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold ${chosenDate === d ? "bg-blue-600 text-white" : "bg-white text-slate-400"}`}>{d}</button>
-                            ))}
+                          <div className="space-y-1 text-xs text-slate-500">
+                            <p><span className="font-bold text-slate-700">Venue:</span> {req.venueType || 'Not specified'}</p>
+                            <p><span className="font-bold text-slate-700">Students:</span> {req.studentCount || 'Not specified'}</p>
+                            <p><span className="font-bold text-slate-700">Dates:</span> {req.preferredDates || 'Not specified'}</p>
                           </div>
                         </td>
-                        <td className="p-6"><input className="bg-slate-50 p-2 rounded-lg w-full" placeholder="Reply..." onChange={e => setAdminMessage(e.target.value)} /></td>
+                        <td className="p-6">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setProcessing(req.id); }}
+                              className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg font-bold text-xs uppercase hover:bg-yellow-200 transition-all"
+                            >
+                              Processing
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); rejectRequest(req.id); }}
+                              className="px-3 py-2 bg-red-100 text-red-700 rounded-lg font-bold text-xs uppercase hover:bg-red-200 transition-all"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

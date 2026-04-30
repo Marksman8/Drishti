@@ -9,7 +9,8 @@ import JoinBatch from './pages/JoinBatch';
 import AdminDashboard from './pages/AdminDashboard';
 import About from './pages/About';
 import Contact from './pages/contact';
-import Dashboard from './pages/Dashboard'
+import Dashboard from './pages/Dashboard';
+import ChatAssistant from './components/ChatAssistant';
 
 const AppContent = () => {
   const location = useLocation();
@@ -36,6 +37,8 @@ const AppContent = () => {
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </div>
+
+      <ChatAssistant />
     </div>
   );
 };
