@@ -42,9 +42,14 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
         status: 'PENDING'
       };
 
+      const { data: { session } } = await supabase.auth.getSession();
+
       const response = await fetch('http://localhost:8080/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify(bookingData)
       });
 

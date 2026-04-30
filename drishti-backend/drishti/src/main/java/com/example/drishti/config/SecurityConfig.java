@@ -5,17 +5,21 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/public/**").permitAll() // Home page, public reviews
-                        .requestMatchers("/api/bookings/**").permitAll() // Allow booking endpoints for development
-                        .requestMatchers("/api/chat/**").permitAll() // Allow chat endpoint
+                        .requestMatchers("/api/bookings", "/api/bookings/**").permitAll() // Allow booking endpoints for development
+                        .requestMatchers("/api/chat", "/api/chat/**").permitAll() // Allow chat endpoint
                         .requestMatchers("/api/student/**").hasAuthority("APPROLE_STUDENT")
                         .requestMatchers("/api/institution/**").hasAuthority("APPROLE_INSTITUTION")
                         .anyRequest().authenticated()
