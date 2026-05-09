@@ -1,0 +1,31 @@
+# Build artifacts
+**/target/
+**/build/
+**/dist/
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+**/app.log
+**/backend_log.txt
+
+# Node
+node_modules/
+**/node_modules/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

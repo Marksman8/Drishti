@@ -4,6 +4,8 @@ import com.example.drishti.entity.CourseBooking;
 import com.example.drishti.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,13 +15,16 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
 public class BookingController {
 
     private final BookingService bookingService;
 
     @PostMapping
-    public ResponseEntity<CourseBooking> createBooking(@RequestBody CourseBooking booking) {
+    public ResponseEntity<CourseBooking> createBooking(
+            @RequestBody CourseBooking booking,
+            @AuthenticationPrincipal Jwt jwt) {
+        // Trust the JWT subject for orgId rather than the request body.
+        booking.setOrgId(UUID.fromString(jwt.getSubject()));
         return ResponseEntity.ok(bookingService.createBooking(booking));
     }
 
@@ -32,8 +37,7 @@ public class BookingController {
     public ResponseEntity<CourseBooking> approveBooking(
             @PathVariable Long id,
             @RequestBody Map<String, String> payload) {
-        String meetingLink = payload.get("meetingLink");
-        return ResponseEntity.ok(bookingService.approveBooking(id, meetingLink));
+        return ResponseEntity.ok(bookingService.approveBooking(id, payload.get("meetingLink")));
     }
 
     @PatchMapping("/reject/{id}")
@@ -45,12 +49,20 @@ public class BookingController {
     public ResponseEntity<CourseBooking> updateStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> payload) {
-        String status = payload.get("status");
-        return ResponseEntity.ok(bookingService.updateStatus(id, status));
+        return ResponseEntity.ok(bookingService.updateStatus(id, payload.get("status")));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<CourseBooking>> getUserBookings(@PathVariable UUID userId) {
-        return ResponseEntity.ok(bookingService.getBookingsByUserId(userId));
+    public ResponseEntity<List<CourseBooking>> getUserBookings(
+            @PathVariable UUID userId,
+            @AuthenticationPrincipal Jwt jwt) {
+        // Only allow users to view their own bookings (or admins).
+        UUID caller = UUID.fromString(jwt.getSubject());
+        boolean isAdmin = jwt.getClaimAsStringList("authorities") != null
+                && jwt.getClaimAsStringList("authorities").contains("ROLE_ADMIN");
+        if (!caller.equals(userId) && !isAdmin) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(bookingService.getBookingsByOrgId(userId));
     }
 }

@@ -57,7 +57,25 @@ const AuthPage = () => {
         });
         if (error) throw error;
 
-        // On success, navigate to the course selection page
+        // Create the profiles row on first login. Don't touch it on
+        // subsequent logins so manual role overrides (e.g. ADMIN) survive.
+        const u = data.user;
+        if (u) {
+          const { data: existing } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', u.id)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabase.from('profiles').insert({
+              id: u.id,
+              full_name: u.user_metadata?.full_name || fullName || null,
+              role: u.user_metadata?.role || role,
+            });
+          }
+        }
+
         navigate('/course');
       }
     } catch (error) {

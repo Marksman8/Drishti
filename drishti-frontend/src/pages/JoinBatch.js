@@ -85,7 +85,7 @@ const JoinBatch = () => {
 
             <div className="space-y-4">
               <button
-                onClick={() => navigate('/quiz')} // THIS CONNECTS TO YOUR QUIZ PAGE
+                onClick={() => navigate('/quiz', { state: { studentName } })}
                 className="w-full bg-blue-700 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-100"
               >
                 Start Final Quiz

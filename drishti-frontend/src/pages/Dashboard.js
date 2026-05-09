@@ -1,55 +1,57 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../SupabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../config/api';
 
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
-  const [bookedSlots, setBookedSlots] = useState([]); // For Students (Online)
-  const [myBookings, setMyBookings] = useState([]);   // For Institutions (Campus)
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // 1. Get Logged in User
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-
-      // 2. Get User Profile (Role & Name)
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      setProfile(profileData);
-
-      // 3. Fetch Data Based on Role
-      if (profileData?.role === 'INSTITUTION') {
-        try {
-          // Fetch institutional requests from Spring Boot (course_bookings table)
-          const response = await fetch(`http://localhost:8080/api/bookings/user/${user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setMyBookings(data);
-          }
-        } catch (err) {
-          console.error("Error fetching institutional bookings:", err);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate('/login');
+          return;
         }
-      } else {
-        // Fetch student slots from Supabase (course_slots table)
-        const { data: slotsData } = await supabase
-          .from('course_slots')
-          .select('*')
-          .eq('booked_by', user.id);
 
-        setBookedSlots(slotsData || []);
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        // Resolve role from profiles, falling back to user_metadata.
+        const resolvedRole =
+          profileData?.role || user.user_metadata?.role || 'STUDENT';
+        const resolvedProfile = {
+          ...(profileData || {}),
+          role: resolvedRole,
+          full_name: profileData?.full_name || user.user_metadata?.full_name,
+        };
+        setProfile(resolvedProfile);
+
+        if (resolvedRole === 'INSTITUTION') {
+          const response = await apiFetch(`/api/bookings/user/${user.id}`);
+          if (response.ok) {
+            setMyBookings(await response.json());
+          }
+        } else {
+          const { data: slotsData } = await supabase
+            .from('course_slots')
+            .select('*')
+            .eq('booked_by', user.id);
+          setBookedSlots(slotsData || []);
+        }
+      } catch (err) {
+        console.error("Dashboard load failed", err);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     fetchDashboardData();
@@ -63,7 +65,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-white pt-24 px-8 md:px-16">
-      {/* Header Section */}
       <div className="mb-12 border-b border-white/5 pb-8">
         <h1 className="text-4xl font-black uppercase tracking-tighter">
           {profile?.role === 'INSTITUTION' ? 'Institution' : 'Student'}{" "}
@@ -76,7 +77,6 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* --- STUDENT VIEW: My Booked Sessions (Online Slots) --- */}
         {profile?.role !== 'INSTITUTION' && (
           <div className="lg:col-span-2 space-y-6">
             <h2 className="text-xl font-bold uppercase tracking-tight flex items-center gap-2">
@@ -130,7 +130,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* --- INSTITUTION VIEW: Institutional Requests --- */}
         <div className={`${profile?.role === 'INSTITUTION' ? 'lg:col-span-2' : 'lg:col-span-1'} space-y-8`}>
           {profile?.role === 'INSTITUTION' && (
             <div className="bg-[#facc15]/5 border border-[#facc15]/20 p-8 rounded-[2.5rem]">
@@ -157,8 +156,8 @@ const Dashboard = () => {
                         </div>
                         <div className="text-right">
                           <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
-                            booking.status === 'PENDING' ? 'text-yellow-500 border-yellow-500/20 bg-yellow-500/5' : 
-                            booking.status === 'APPROVED' ? 'text-green-400 border-green-400/20 bg-green-400/5' : 
+                            booking.status === 'PENDING' ? 'text-yellow-500 border-yellow-500/20 bg-yellow-500/5' :
+                            booking.status === 'APPROVED' ? 'text-green-400 border-green-400/20 bg-green-400/5' :
                             'text-blue-400 border-blue-400/20 bg-blue-400/5'
                           }`}>
                             {booking.status === 'PENDING' ? 'Awaiting Approval' : booking.status}
@@ -172,7 +171,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* SHARED COMPONENT: Activity Overview */}
           <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem]">
             <h3 className="text-white font-black uppercase text-sm tracking-widest mb-6">Activity Overview</h3>
             <div className="flex items-center gap-4">

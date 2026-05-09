@@ -9,13 +9,13 @@ import java.util.UUID;
 @Data
 public class User {
     @Id
-    private UUID id; // This matches the Supabase Auth User ID
+    private UUID id; // Matches the Supabase Auth User ID
 
     @Column(unique = true)
-    private String username;
+    private String username; // Optional; populated post-signup
 
     @Column(name = "full_name")
     private String fullName;
 
-    private String role; // 'STUDENT' or 'INSTITUTION'
+    private String role; // 'STUDENT', 'INSTITUTION', or 'ADMIN'
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../SupabaseClient';
+import { apiFetch } from '../config/api';
 
 const BookingModal = ({ isOpen, onClose, courseTitle }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,10 +27,9 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
         setIsSubmitting(false);
         return;
       }
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
 
       const bookingData = {
-        orgId: user.id,
         schoolName: profile?.full_name || 'Unknown School',
         courseName: courseTitle,
         venueType: formData.venueType,
@@ -38,18 +38,11 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
           formData.preferredDate1,
           formData.preferredDate2,
           formData.preferredDate3
-        ].filter(date => date).join(','),
-        status: 'PENDING'
+        ].filter(date => date).join(',')
       };
 
-      const { data: { session } } = await supabase.auth.getSession();
-
-      const response = await fetch('http://localhost:8080/api/bookings', {
+      const response = await apiFetch('/api/bookings', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
         body: JSON.stringify(bookingData)
       });
 
@@ -60,11 +53,13 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
           onClose();
         }, 3000);
       } else {
-        alert("Something went wrong");
+        const text = await response.text().catch(() => '');
+        console.error('Booking failed', response.status, text);
+        alert(`Booking failed (${response.status}): ${text || response.statusText}`);
       }
-    } catch(err) {
-      console.error(err);
-      alert("Failed to submit request");
+    } catch (err) {
+      console.error('Booking request threw', err);
+      alert(`Could not reach the backend.\n\n${err?.message || err}\n\nIs the Spring Boot server running on http://localhost:8080?`);
     }
     setIsSubmitting(false);
   };
@@ -75,7 +70,6 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-[#032b7a]/40">
       <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
 
-        {/* Header */}
         <div className="bg-[#032b7a] p-8 text-white relative">
           <h2 className="text-2xl font-black uppercase tracking-tighter">Institutional Request</h2>
           <p className="text-[#f4b41a] text-sm font-bold uppercase tracking-widest mt-1">Course: {courseTitle}</p>
@@ -87,10 +81,8 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
           </button>
         </div>
 
-        {/* Form */}
         <div className="p-10 space-y-8">
 
-          {/* Venue Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest">Venue Type</label>
@@ -118,31 +110,12 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
             </div>
           </div>
 
-          {/* Date Options */}
           <div className="space-y-4">
             <label className="text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest">Provide 3 Preferred Dates</label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input
-                name="preferredDate1"
-                type="date"
-                value={formData.preferredDate1}
-                onChange={handleInputChange}
-                className="bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none text-sm focus:border-[#032b7a] transition-all text-slate-900"
-              />
-              <input
-                name="preferredDate2"
-                type="date"
-                value={formData.preferredDate2}
-                onChange={handleInputChange}
-                className="bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none text-sm focus:border-[#032b7a] transition-all text-slate-900"
-              />
-              <input
-                name="preferredDate3"
-                type="date"
-                value={formData.preferredDate3}
-                onChange={handleInputChange}
-                className="bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none text-sm focus:border-[#032b7a] transition-all text-slate-900"
-              />
+              <input name="preferredDate1" type="date" value={formData.preferredDate1} onChange={handleInputChange} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none text-sm focus:border-[#032b7a] transition-all text-slate-900" />
+              <input name="preferredDate2" type="date" value={formData.preferredDate2} onChange={handleInputChange} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none text-sm focus:border-[#032b7a] transition-all text-slate-900" />
+              <input name="preferredDate3" type="date" value={formData.preferredDate3} onChange={handleInputChange} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none text-sm focus:border-[#032b7a] transition-all text-slate-900" />
             </div>
           </div>
 
@@ -155,7 +128,6 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
           </button>
         </div>
 
-        {/* Success Popup */}
         {showSuccess && (
           <div className="absolute inset-0 bg-[#032b7a]/95 flex items-center justify-center animate-in fade-in duration-300">
             <div className="text-center text-white">

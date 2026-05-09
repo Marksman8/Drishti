@@ -18,17 +18,15 @@ const CourseSelection = () => {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .maybeSingle();
 
-          if (data) {
-            setUserRole(data.role); // Sets 'INSTITUTION' or 'STUDENT'
-          } else {
-            setUserRole('STUDENT'); // Fallback if no profile row
-          }
+          // Prefer profiles.role; fall back to user_metadata.role (set at signup).
+          const resolved = data?.role || user.user_metadata?.role || 'STUDENT';
+          setUserRole(resolved);
         } else {
           setUserRole('STUDENT'); // Fallback for guests
         }

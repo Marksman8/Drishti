@@ -1,46 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../SupabaseClient';
+import { apiFetch } from '../config/api';
 
 const AdminDashboard = () => {
-  // --- STATE MANAGEMENT ---
   const [activeTab, setActiveTab] = useState("REQUESTS");
   const [loading, setLoading] = useState(false);
 
-  // --- DATABASE DATA STATES ---
   const [pendingRequests, setPendingRequests] = useState([]);
   const [existingCourses, setExistingCourses] = useState([]);
 
-  // --- FORM STATES (Slots & Courses) ---
   const [slotData, setSlotData] = useState({ courseName: '', date: '', time: '', meetLink: '' });
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [currentTopic, setCurrentTopic] = useState("");
-  const [newCourse, setNewCourse] = useState({ title: '', professor: '', type: 'General', description: '', videoUrl: '', topics: [] });
 
-  // --- UI STATES ---
   const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [chosenDate, setChosenDate] = useState("");
   const [adminMessage, setAdminMessage] = useState("");
 
-  // --- FETCH DATA FROM SUPABASE ON LOAD ---
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchInitialData = async () => {
     setLoading(true);
-
-    // 1. Fetch School Requests from Spring Boot Controller
     try {
-      const resp = await fetch('http://localhost:8080/api/bookings/pending');
-      if (resp.ok) {
-        const data = await resp.json();
-        setPendingRequests(data);
-      }
+      const resp = await apiFetch('/api/bookings/pending');
+      if (resp.ok) setPendingRequests(await resp.json());
     } catch (err) {
       console.error("Failed to fetch pending requests", err);
     }
 
-    // 2. Fetch Existing Courses (to populate dropdowns)
     const { data: crs } = await supabase.from('courses').select('*');
     if (crs) setExistingCourses(crs);
 
@@ -49,19 +36,13 @@ const AdminDashboard = () => {
 
   const fetchPendingRequests = async () => {
     try {
-      const resp = await fetch('http://localhost:8080/api/bookings/pending');
-      if (resp.ok) {
-        const data = await resp.json();
-        setPendingRequests(data);
-      }
+      const resp = await apiFetch('/api/bookings/pending');
+      if (resp.ok) setPendingRequests(await resp.json());
     } catch (err) {
       console.error("Failed to refresh pending requests", err);
     }
   };
 
-  // --- HANDLERS ---
-
-  // 1. Create Online Slot (G-Meet)
   const handleAddSlot = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -79,14 +60,11 @@ const AdminDashboard = () => {
     setLoading(false);
   };
 
-  // 2. Approve Institutional Request
   const approveRequest = async (id, gMeetLink) => {
-    const response = await fetch(`http://localhost:8080/api/bookings/approve/${id}`, {
+    const response = await apiFetch(`/api/bookings/approve/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ meetingLink: gMeetLink })
     });
-
     if (response.ok) {
       alert("Request Approved!");
       fetchPendingRequests();
@@ -95,14 +73,9 @@ const AdminDashboard = () => {
     }
   };
 
-  // 2b. Reject Institutional Request
   const rejectRequest = async (id) => {
     if (!window.confirm("Are you sure you want to reject this request?")) return;
-
-    const response = await fetch(`http://localhost:8080/api/bookings/reject/${id}`, {
-      method: 'PATCH'
-    });
-
+    const response = await apiFetch(`/api/bookings/reject/${id}`, { method: 'PATCH' });
     if (response.ok) {
       alert("Request Rejected!");
       fetchPendingRequests();
@@ -110,32 +83,20 @@ const AdminDashboard = () => {
     }
   };
 
-  // 2c. Update Status to Processing
   const setProcessing = async (id) => {
-    const response = await fetch(`http://localhost:8080/api/bookings/status/${id}`, {
+    const response = await apiFetch(`/api/bookings/status/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'PROCESSING' })
     });
-
     if (response.ok) {
       alert("Request set to Processing!");
       fetchPendingRequests();
     }
   };
 
-  // 3. Add New Course to Catalog
-  const addTopic = () => {
-    if (currentTopic.trim()) {
-      setNewCourse({ ...newCourse, topics: [...newCourse.topics, currentTopic] });
-      setCurrentTopic("");
-    }
-  };
-
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
 
-      {/* --- SIDEBAR --- */}
       <aside className="w-72 bg-slate-900 flex flex-col p-8 shadow-2xl z-50">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl">D</div>
@@ -152,10 +113,8 @@ const AdminDashboard = () => {
         </nav>
       </aside>
 
-      {/* --- MAIN CONTENT --- */}
       <main className="flex-1 overflow-y-auto p-12">
 
-        {/* TAB 1: INSTITUTIONAL REQUESTS */}
         {activeTab === "REQUESTS" && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-4xl font-black text-slate-900 uppercase mb-10 tracking-tight">Institutional Stream</h1>
@@ -165,7 +124,7 @@ const AdminDashboard = () => {
                 {selectedRequestId && (
                   <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white animate-in zoom-in">
                     <p className="text-[10px] font-black uppercase text-blue-400 mb-2">Reviewing</p>
-                    <h4 className="font-bold text-lg mb-4 leading-tight">{pendingRequests.find(r => r.id === selectedRequestId)?.schoolName || pendingRequests.find(r => r.id === selectedRequestId)?.school_name}</h4>
+                    <h4 className="font-bold text-lg mb-4 leading-tight">{pendingRequests.find(r => r.id === selectedRequestId)?.schoolName}</h4>
                     <input
                       className="w-full bg-slate-800 p-3 rounded-xl mb-4 text-sm"
                       placeholder="Google Meet Link..."
@@ -184,16 +143,26 @@ const AdminDashboard = () => {
                   <tbody className="divide-y divide-slate-50 text-sm">
                     {pendingRequests.map(req => (
                       <tr key={req.id} onClick={() => setSelectedRequestId(req.id)} className={`cursor-pointer ${selectedRequestId === req.id ? "bg-blue-50/40" : ""}`}>
-                        <td className="p-6 font-bold">{req.schoolName || req.school_name}<br/><span className="text-blue-600 text-[10px] uppercase">{req.courseName || req.course_name}</span></td>
+                        <td className="p-6 font-bold">{req.schoolName}<br/><span className="text-blue-600 text-[10px] uppercase">{req.courseName}</span></td>
                         <td className="p-6">
                           <div className="space-y-1 text-xs text-slate-500">
                             <p><span className="font-bold text-slate-700">Venue:</span> {req.venueType || 'Not specified'}</p>
-                            <p><span className="font-bold text-slate-700">Students:</span> {req.studentCount || 'Not specified'}</p>
+                            <p><span className="font-bold text-slate-700">Students:</span> {req.studentCount ?? 'Not specified'}</p>
                             <p><span className="font-bold text-slate-700">Dates:</span> {req.preferredDates || 'Not specified'}</p>
                           </div>
                         </td>
                         <td className="p-6">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const link = window.prompt("Google Meet link for this booking:", "");
+                                if (link && link.trim()) approveRequest(req.id, link.trim());
+                              }}
+                              className="px-3 py-2 bg-green-100 text-green-700 rounded-lg font-bold text-xs uppercase hover:bg-green-200 transition-all"
+                            >
+                              Approve
+                            </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setProcessing(req.id); }}
                               className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg font-bold text-xs uppercase hover:bg-yellow-200 transition-all"
@@ -217,17 +186,16 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* TAB 2: CREATE ONLINE SLOTS */}
         {activeTab === "SLOTS" && (
           <div className="animate-in fade-in duration-500 max-w-2xl">
             <h1 className="text-4xl font-black text-slate-900 uppercase mb-10">Create Online Slot</h1>
             <form onSubmit={handleAddSlot} className="bg-white p-10 rounded-[3rem] shadow-xl space-y-6">
-              <Select label="Select Course" options={existingCourses} onChange={val => setSlotData({...slotData, courseName: val})} />
+              <Select label="Select Course" options={existingCourses} onChange={val => setSlotData(s => ({...s, courseName: val}))} />
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Date" type="date" onChange={val => setSlotData({...slotData, date: val})} />
-                <Input label="Time" type="time" onChange={val => setSlotData({...slotData, time: val})} />
+                <Input label="Date" type="date" onChange={val => setSlotData(s => ({...s, date: val}))} />
+                <Input label="Time" type="time" onChange={val => setSlotData(s => ({...s, time: val}))} />
               </div>
-              <Input label="Google Meet Link" placeholder="https://meet.google.com/..." onChange={val => setSlotData({...slotData, meetLink: val})} />
+              <Input label="Google Meet Link" placeholder="https://meet.google.com/..." onChange={val => setSlotData(s => ({...s, meetLink: val}))} />
               <button disabled={loading} className="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase hover:bg-blue-600 transition-all">
                 {loading ? "Publishing..." : "Publish Slot to Students"}
               </button>
@@ -235,12 +203,10 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* TAB 3: COURSE CATALOG */}
         {activeTab === "COURSES" && (
           <div className="animate-in slide-in-from-right-8 duration-500">
             <div className="flex justify-between items-center mb-12">
               <h1 className="text-4xl font-black text-slate-900 uppercase">Course Catalog</h1>
-              <button onClick={() => setShowAddModal(true)} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs">+ Create New Course</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                {existingCourses.map(course => (
@@ -257,7 +223,6 @@ const AdminDashboard = () => {
   );
 };
 
-// --- HELPER COMPONENTS ---
 const TabButton = ({ active, onClick, icon, label }) => (
   <button onClick={onClick} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-sm transition-all ${active ? "bg-blue-600 text-white shadow-lg" : "text-slate-400 hover:bg-slate-800"}`}>
     <span>{icon}</span> {label}

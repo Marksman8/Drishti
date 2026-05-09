@@ -28,9 +28,10 @@ public class CourseBooking {
     @Column(nullable = false)
     private String courseName;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private String status = "PENDING";
+    private BookingStatus status = BookingStatus.PENDING;
 
     @Column
     private String meetingLink;

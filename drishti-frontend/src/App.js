@@ -11,6 +11,7 @@ import About from './pages/About';
 import Contact from './pages/contact';
 import Dashboard from './pages/Dashboard';
 import ChatAssistant from './components/ChatAssistant';
+import AdminRoute from './components/AdminRoute';
 
 const AppContent = () => {
   const location = useLocation();
@@ -18,12 +19,8 @@ const AppContent = () => {
 
   return (
     <div className="bg-[#0f172a] min-h-screen">
-
       {!isAdminPath && <Navbar />}
 
-      {/* Fixed the stray comment tag and added pt-20
-          to offset the fixed navbar height (h-20).
-      */}
       <div className={!isAdminPath ? "pt-20" : ""}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -31,14 +28,21 @@ const AppContent = () => {
           <Route path="/course" element={<CourseSelection />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/join" element={<JoinBatch />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </div>
 
-      <ChatAssistant />
+      {!isAdminPath && <ChatAssistant />}
     </div>
   );
 };

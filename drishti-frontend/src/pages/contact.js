@@ -127,25 +127,35 @@ const Contact = () => {
                 Send Us A <span>Message</span>
               </h2>
 
-              <form>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  const subject = encodeURIComponent(`Drishti contact from ${fd.get('name') || 'visitor'}`);
+                  const body = encodeURIComponent(
+                    `Name: ${fd.get('name')}\nEmail: ${fd.get('email')}\nPhone: ${fd.get('phone')}\n\n${fd.get('message')}`
+                  );
+                  window.location.href = `mailto:contact@drishti.org.in?subject=${subject}&body=${body}`;
+                }}
+              >
                 <div className="input-box">
                   <span>👤</span>
-                  <input type="text" placeholder="Name" />
+                  <input type="text" name="name" placeholder="Name" required />
                 </div>
 
                 <div className="input-box">
                   <span>✉️</span>
-                  <input type="email" placeholder="Email" />
+                  <input type="email" name="email" placeholder="Email" required />
                 </div>
 
                 <div className="input-box">
                   <span>📞</span>
-                  <input type="text" placeholder="Phone" />
+                  <input type="text" name="phone" placeholder="Phone" />
                 </div>
 
                 <div className="input-box textarea-box">
                   <span>💬</span>
-                  <textarea placeholder="Message"></textarea>
+                  <textarea name="message" placeholder="Message" required></textarea>
                 </div>
 
                 <button className="send-btn" type="submit">
