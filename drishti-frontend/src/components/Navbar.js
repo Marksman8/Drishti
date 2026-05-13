@@ -1,33 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../SupabaseClient';
+import { getUser, getViewAs, setViewAs, onAuthChange, logout } from '../services/AuthService';
 import drishtiLogo from './drishtilogo.png';
 
 const Navbar = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(getUser());
+  const [viewAs, setViewAsState] = useState(getViewAs());
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 1. Check for an existing session on load
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-    };
-    checkUser();
-
-    // 2. Listen for Auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    setUser(getUser());
+    setViewAsState(getViewAs());
+    const unsubscribe = onAuthChange((u) => {
+      setUser(u);
+      setViewAsState(getViewAs());
     });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+  const handleLogout = () => {
+    logout();
     navigate('/');
   };
+
+  const handleExitPreview = () => {
+    setViewAs(null);
+    setViewAsState(null);
+    navigate('/admin');
+  };
+
+  const isAdmin = user?.role === 'ADMIN';
+  const isPreviewing = isAdmin && !!viewAs;
 
   return (
     <nav className="fixed top-0 left-0 w-full h-20 flex justify-between items-center px-12 bg-[#0f172a] border-b border-[#facc15]/20 z-[1000] shadow-xl">
@@ -75,17 +78,27 @@ const Navbar = () => {
             <div className="text-right hidden sm:block">
               <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em]">Logged in as</p>
               <p className="text-sm font-bold text-white tracking-tight">
-                {user.user_metadata?.full_name || 'User'}
+                {user.fullName || 'User'}
               </p>
             </div>
 
-            {/* Dashboard Button (Same style as your Login button) */}
+            {/* Dashboard / Admin Console Button */}
             <Link
-              to="/dashboard"
+              to={isAdmin && !isPreviewing ? '/admin' : '/dashboard'}
               className="bg-[#facc15] text-[#0f172a] px-6 py-2.5 rounded-full font-black hover:bg-white transition-all shadow-lg active:scale-95 text-[11px] uppercase tracking-widest"
             >
-              Dashboard
+              {isAdmin && !isPreviewing ? 'Admin Console' : 'Dashboard'}
             </Link>
+
+            {isPreviewing && (
+              <button
+                onClick={handleExitPreview}
+                className="text-[#facc15] hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest border border-[#facc15]/30 px-3 py-1.5 rounded-full"
+                title={`Currently previewing as ${viewAs}`}
+              >
+                ← Admin
+              </button>
+            )}
 
             {/* Subtle Logout Link */}
             <button

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../SupabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { login, register, forgotPassword, logout } from '../services/AuthService';
 import './AuthPage.css';
 import Navbar from '../components/Navbar';
 import amritaBg from '../components/Amritacollege.jpg';
@@ -10,7 +10,6 @@ const AuthPage = () => {
   const [isSchoolMode, setIsSchoolMode] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // --- FORM STATES ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -27,7 +26,6 @@ const AuthPage = () => {
     return () => observer.disconnect();
   }, []);
 
-  // --- AUTH LOGIC ---
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -36,56 +34,43 @@ const AuthPage = () => {
 
     try {
       if (isRegistering) {
-        // REGISTER LOGIC
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              role: role,
-            },
-          },
-        });
-        if (error) throw error;
-        alert("Registration successful! Please check your email for a verification link.");
+        await register({ email, password, fullName, role });
+        alert('Registration successful! Check your email for a verification link before logging in.');
+        setIsRegistering(false);
       } else {
-        // LOGIN LOGIC
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-
-        // Create the profiles row on first login. Don't touch it on
-        // subsequent logins so manual role overrides (e.g. ADMIN) survive.
-        const u = data.user;
-        if (u) {
-          const { data: existing } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', u.id)
-            .maybeSingle();
-
-          if (!existing) {
-            await supabase.from('profiles').insert({
-              id: u.id,
-              full_name: u.user_metadata?.full_name || fullName || null,
-              role: u.user_metadata?.role || role,
-            });
-          }
+        const result = await login({ email, password });
+        const userRole = result?.user?.role;
+        if (userRole !== role) {
+          logout();
+          alert(
+            userRole === 'ADMIN'
+              ? 'Admin accounts must log in through the admin portal.'
+              : `This account is registered as ${userRole?.toLowerCase()}. Use the ${userRole?.toLowerCase()} login form.`
+          );
+          return;
         }
-
         navigate('/course');
       }
     } catch (error) {
-      alert(error.message);
+      alert(error.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper to clear inputs when switching modes
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert('Enter your email above first, then click "Forgot password?".');
+      return;
+    }
+    try {
+      const res = await forgotPassword(email);
+      alert(res?.message || 'If an account exists for that email, a reset link has been sent.');
+    } catch (error) {
+      alert(error.message || 'Could not send reset link.');
+    }
+  };
+
   const toggleMode = (schoolMode) => {
     setIsSchoolMode(schoolMode);
     setIsRegistering(false);
@@ -141,7 +126,15 @@ const AuthPage = () => {
                     {loading ? "PROCESSING..." : (isRegistering ? "SIGN UP" : "LOG IN")}
                 </button>
 
-                <p className="mt-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]" onClick={() => setIsRegistering(!isRegistering)}>
+                {!isRegistering && (
+                  <p
+                    className="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]"
+                    onClick={handleForgotPassword}
+                  >
+                    Forgot password?
+                  </p>
+                )}
+                <p className="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]" onClick={() => setIsRegistering(!isRegistering)}>
                     {isRegistering ? "Already have an account? Login" : "New to Drishti? Register here"}
                 </p>
               </form>
@@ -174,7 +167,15 @@ const AuthPage = () => {
                     {loading ? "PROCESSING..." : (isRegistering ? "REGISTER" : "LOG IN")}
                 </button>
 
-                <p className="mt-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]" onClick={() => setIsRegistering(!isRegistering)}>
+                {!isRegistering && (
+                  <p
+                    className="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]"
+                    onClick={handleForgotPassword}
+                  >
+                    Forgot password?
+                  </p>
+                )}
+                <p className="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]" onClick={() => setIsRegistering(!isRegistering)}>
                     {isRegistering ? "Back to Login" : "Register Institution"}
                 </p>
               </form>

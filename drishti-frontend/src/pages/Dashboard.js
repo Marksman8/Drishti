@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../SupabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../config/api';
+import { getUser, isAuthenticated, getEffectiveRole, onAuthChange } from '../services/AuthService';
 
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
@@ -13,39 +13,36 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        if (!isAuthenticated()) {
+          navigate('/login');
+          return;
+        }
+        const user = getUser();
         if (!user) {
           navigate('/login');
           return;
         }
 
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
+        const effectiveRole = getEffectiveRole() || 'STUDENT';
+        setProfile({
+          id: user.id,
+          full_name: user.fullName,
+          role: effectiveRole,
+        });
 
-        // Resolve role from profiles, falling back to user_metadata.
-        const resolvedRole =
-          profileData?.role || user.user_metadata?.role || 'STUDENT';
-        const resolvedProfile = {
-          ...(profileData || {}),
-          role: resolvedRole,
-          full_name: profileData?.full_name || user.user_metadata?.full_name,
-        };
-        setProfile(resolvedProfile);
+        setBookedSlots([]);
+        setMyBookings([]);
 
-        if (resolvedRole === 'INSTITUTION') {
+        if (effectiveRole === 'INSTITUTION') {
           const response = await apiFetch(`/api/bookings/user/${user.id}`);
           if (response.ok) {
             setMyBookings(await response.json());
           }
-        } else {
-          const { data: slotsData } = await supabase
-            .from('course_slots')
-            .select('*')
-            .eq('booked_by', user.id);
-          setBookedSlots(slotsData || []);
+        } else if (effectiveRole === 'STUDENT') {
+          const response = await apiFetch(`/api/slots/user/${user.id}`);
+          if (response.ok) {
+            setBookedSlots(await response.json());
+          }
         }
       } catch (err) {
         console.error("Dashboard load failed", err);
@@ -55,6 +52,11 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
+    const unsubscribe = onAuthChange(() => {
+      setLoading(true);
+      fetchDashboardData();
+    });
+    return () => unsubscribe();
   }, [navigate]);
 
   if (loading) return (
@@ -91,10 +93,10 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="text-xl font-black uppercase text-white group-hover:text-[#facc15] transition-colors">
-                          {slot.course_name}
+                          {slot.courseName}
                         </h3>
                         <p className="text-slate-400 text-xs mt-1">
-                          {slot.slot_date} • {slot.slot_time}
+                          {slot.slotDate} • {slot.slotTime}
                         </p>
                       </div>
                       <span className="bg-green-500/20 text-green-400 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
@@ -102,9 +104,9 @@ const Dashboard = () => {
                       </span>
                     </div>
 
-                    {slot.meeting_link ? (
+                    {slot.meetingLink ? (
                       <a
-                        href={slot.meeting_link}
+                        href={slot.meetingLink}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-6 flex items-center justify-center gap-2 w-full bg-[#facc15] text-[#0f172a] py-3 rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-white transition-all shadow-lg shadow-yellow-400/10"

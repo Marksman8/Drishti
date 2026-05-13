@@ -10,12 +10,16 @@ import AdminDashboard from './pages/AdminDashboard';
 import About from './pages/About';
 import Contact from './pages/contact';
 import Dashboard from './pages/Dashboard';
+import VerifyEmail from './pages/VerifyEmail';
+import ResetPassword from './pages/ResetPassword';
+import AdminLogin from './pages/AdminLogin';
 import ChatAssistant from './components/ChatAssistant';
 import AdminRoute from './components/AdminRoute';
 
 const AppContent = () => {
   const location = useLocation();
-  const isAdminPath = location.pathname === '/admin';
+  const isAdminPath = location.pathname === '/admin' || location.pathname === '/admin-login';
+  const isQuizPath = location.pathname === '/quiz';
 
   return (
     <div className="bg-[#0f172a] min-h-screen">
@@ -39,10 +43,13 @@ const AppContent = () => {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
         </Routes>
       </div>
 
-      {!isAdminPath && <ChatAssistant />}
+      {!isAdminPath && !isQuizPath && <ChatAssistant />}
     </div>
   );
 };

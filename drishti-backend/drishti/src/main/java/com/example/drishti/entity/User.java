@@ -1,7 +1,10 @@
 package com.example.drishti.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -9,13 +12,40 @@ import java.util.UUID;
 @Data
 public class User {
     @Id
-    private UUID id; // Matches the Supabase Auth User ID
+    @GeneratedValue
+    private UUID id;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @JsonIgnore
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
     @Column(unique = true)
-    private String username; // Optional; populated post-signup
+    private String username;
 
     @Column(name = "full_name")
     private String fullName;
 
-    private String role; // 'STUDENT', 'INSTITUTION', or 'ADMIN'
+    private String role;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @JsonIgnore
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @JsonIgnore
+    @Column(name = "verification_token_expires_at")
+    private Instant verificationTokenExpiresAt;
+
+    @JsonIgnore
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @JsonIgnore
+    @Column(name = "reset_token_expires_at")
+    private Instant resetTokenExpiresAt;
 }

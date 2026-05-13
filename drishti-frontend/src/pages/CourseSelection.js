@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../SupabaseClient';
+import { getEffectiveRole, onAuthChange } from '../services/AuthService';
 import Navbar from '../components/Navbar';
 import CourseCard from '../components/CourseCard';
 import BookingModal from '../components/InstitutionBookingModal';
@@ -9,35 +9,16 @@ const CourseSelection = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState("");
-  const [userRole, setUserRole] = useState(null); // Starts as null
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          // Prefer profiles.role; fall back to user_metadata.role (set at signup).
-          const resolved = data?.role || user.user_metadata?.role || 'STUDENT';
-          setUserRole(resolved);
-        } else {
-          setUserRole('STUDENT'); // Fallback for guests
-        }
-      } catch (err) {
-        setUserRole('STUDENT');
-      } finally {
-        setLoading(false); // Stop the loading spinner
-      }
-    };
-
-    fetchUserRole();
+    setUserRole(getEffectiveRole() || 'STUDENT');
+    setLoading(false);
+    const unsubscribe = onAuthChange(() => {
+      setUserRole(getEffectiveRole() || 'STUDENT');
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleOpenModal = (title) => {
@@ -87,7 +68,7 @@ const CourseSelection = () => {
               <div key={index} className="group relative bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-2 hover:border-[#facc15]/40 transition-all shadow-2xl">
                 <CourseCard
                   course={course}
-                  userRole={userRole} // <--- Dynamic role passed here
+                  userRole={userRole}
                   onBookClick={() => handleOpenModal(course.title)}
                   onEnrollClick={() => handleOpenStudentModal(course.title)}
                 />
@@ -110,7 +91,7 @@ const CourseSelection = () => {
               <div key={index} className="group relative bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-2 hover:border-pink-500/40 transition-all shadow-2xl">
                 <CourseCard
                   course={course}
-                  userRole={userRole} // <--- Dynamic role passed here
+                  userRole={userRole}
                   onBookClick={() => handleOpenModal(course.title)}
                   onEnrollClick={() => handleOpenStudentModal(course.title)}
                 />

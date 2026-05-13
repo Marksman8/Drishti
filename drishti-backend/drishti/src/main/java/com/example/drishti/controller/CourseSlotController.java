@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,6 +24,29 @@ public class CourseSlotController {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    @GetMapping
+    public ResponseEntity<List<CourseSlot>> listAll() {
+        return ResponseEntity.ok(slotRepository.findAll());
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<CourseSlot>> listForUser(
+            @PathVariable UUID userId,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID caller = UUID.fromString(jwt.getSubject());
+        if (!caller.equals(userId)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(slotRepository.findByBookedBy(userId));
+    }
+
+    @PostMapping
+    public ResponseEntity<CourseSlot> create(@RequestBody CourseSlot slot) {
+        slot.setId(null);
+        if (slot.getIsBooked() == null) slot.setIsBooked(false);
+        return ResponseEntity.ok(slotRepository.save(slot));
+    }
 
     @PostMapping("/book/{slotId}")
     @Transactional

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { supabase } from '../SupabaseClient';
 import { apiFetch } from '../config/api';
+import { getUser } from '../services/AuthService';
 
 const BookingModal = ({ isOpen, onClose, courseTitle }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,16 +21,15 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
   const handleBooking = async () => {
     setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = getUser();
       if (!user) {
         alert("Please log in first!");
         setIsSubmitting(false);
         return;
       }
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
 
       const bookingData = {
-        schoolName: profile?.full_name || 'Unknown School',
+        schoolName: user.fullName || 'Unknown School',
         courseName: courseTitle,
         venueType: formData.venueType,
         studentCount: formData.studentCount,

@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../SupabaseClient';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../config/api';
+import { getViewAs, setViewAs } from '../services/AuthService';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("REQUESTS");
   const [loading, setLoading] = useState(false);
+  const [viewAs, setViewAsState] = useState(getViewAs() || 'ADMIN');
+
+  const openAs = (role, path) => {
+    setViewAs(role === 'ADMIN' ? null : role);
+    setViewAsState(role);
+    navigate(path);
+  };
 
   const [pendingRequests, setPendingRequests] = useState([]);
   const [existingCourses, setExistingCourses] = useState([]);
@@ -28,8 +37,12 @@ const AdminDashboard = () => {
       console.error("Failed to fetch pending requests", err);
     }
 
-    const { data: crs } = await supabase.from('courses').select('*');
-    if (crs) setExistingCourses(crs);
+    try {
+      const resp = await apiFetch('/api/courses');
+      if (resp.ok) setExistingCourses(await resp.json());
+    } catch (err) {
+      console.error("Failed to fetch courses", err);
+    }
 
     setLoading(false);
   };
@@ -46,16 +59,26 @@ const AdminDashboard = () => {
   const handleAddSlot = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.from('course_slots').insert([{
-      course_name: slotData.courseName,
-      slot_date: slotData.date,
-      slot_time: slotData.time,
-      meeting_link: slotData.meetLink,
-      is_booked: false
-    }]);
-    if (!error) {
-      alert("Online Slot Published!");
-      setSlotData({ courseName: '', date: '', time: '', meetLink: '' });
+    try {
+      const resp = await apiFetch('/api/slots', {
+        method: 'POST',
+        body: JSON.stringify({
+          courseName: slotData.courseName,
+          slotDate: slotData.date,
+          slotTime: slotData.time,
+          meetingLink: slotData.meetLink,
+          isBooked: false
+        })
+      });
+      if (resp.ok) {
+        alert("Online Slot Published!");
+        setSlotData({ courseName: '', date: '', time: '', meetLink: '' });
+      } else {
+        alert('Failed to publish slot.');
+      }
+    } catch (err) {
+      console.error('Failed to publish slot', err);
+      alert('Failed to publish slot.');
     }
     setLoading(false);
   };
@@ -111,6 +134,45 @@ const AdminDashboard = () => {
           <TabButton active={activeTab === "SLOTS"} onClick={() => setActiveTab("SLOTS")} icon="⚡" label="Online Slots" />
           <TabButton active={activeTab === "COURSES"} onClick={() => setActiveTab("COURSES")} icon="🎓" label="Manage Courses" />
         </nav>
+
+        {/* View As switcher - admin-only tool for previewing the app */}
+        <div className="mt-8 pt-6 border-t border-slate-800">
+          <p className="text-[9px] font-black uppercase text-blue-400 tracking-[0.3em] mb-3">Preview Mode</p>
+          <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">
+            Open the public-facing app as a student or institution to test bookings.
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => openAs('STUDENT', '/course')}
+              className="w-full bg-[#facc15] text-[#0f172a] px-4 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all active:scale-95"
+            >
+              Open as Student →
+            </button>
+            <button
+              onClick={() => openAs('INSTITUTION', '/course')}
+              className="w-full bg-white text-[#0f172a] px-4 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-50 transition-all active:scale-95"
+            >
+              Open as Institution →
+            </button>
+            <button
+              onClick={() => openAs('STUDENT', '/dashboard')}
+              className="w-full bg-slate-800 text-slate-300 px-4 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 transition-all"
+            >
+              Student Dashboard →
+            </button>
+            <button
+              onClick={() => openAs('INSTITUTION', '/dashboard')}
+              className="w-full bg-slate-800 text-slate-300 px-4 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 transition-all"
+            >
+              Institution Dashboard →
+            </button>
+          </div>
+          {viewAs && viewAs !== 'ADMIN' && (
+            <p className="text-[9px] text-yellow-500 mt-4 font-bold uppercase tracking-widest">
+              Currently previewing as: {viewAs}
+            </p>
+          )}
+        </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto p-12">
