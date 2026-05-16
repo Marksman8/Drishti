@@ -14,6 +14,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import ResetPassword from './pages/ResetPassword';
 import AdminLogin from './pages/AdminLogin';
 import ChatAssistant from './components/ChatAssistant';
+import CookieConsent from './components/CookieConsent';
 import AdminRoute from './components/AdminRoute';
 
 const AppContent = () => {
@@ -50,6 +51,7 @@ const AppContent = () => {
       </div>
 
       {!isAdminPath && !isQuizPath && <ChatAssistant />}
+      <CookieConsent />
     </div>
   );
 };

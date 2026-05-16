@@ -44,6 +44,8 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/public/**").permitAll()
+                        // Phone verification needs the logged-in user's JWT — must stay authenticated.
+                        .requestMatchers("/api/auth/phone/**").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/courses/**").permitAll()
                         .requestMatchers("/api/student/**").hasAuthority("ROLE_STUDENT")

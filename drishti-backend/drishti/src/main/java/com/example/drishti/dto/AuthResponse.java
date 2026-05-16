@@ -11,6 +11,8 @@ import java.util.UUID;
 public class AuthResponse {
     private String token;
     private UserPayload user;
+    // True when this is a brand-new account that still needs phone verification.
+    private boolean phoneVerificationRequired;
 
     @Data
     @Builder
@@ -20,6 +22,7 @@ public class AuthResponse {
         private String fullName;
         private String role;
         private boolean emailVerified;
+        private boolean phoneVerified;
 
         public static UserPayload from(User user) {
             return UserPayload.builder()
@@ -28,6 +31,7 @@ public class AuthResponse {
                     .fullName(user.getFullName())
                     .role(user.getRole())
                     .emailVerified(user.isEmailVerified())
+                    .phoneVerified(user.isPhoneVerified())
                     .build();
         }
     }

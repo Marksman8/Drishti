@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { apiFetch } from '../config/api';
 import { getUser } from '../services/AuthService';
+import { logActivity } from '../services/Activity';
 
 const BookingModal = ({ isOpen, onClose, courseTitle }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +47,7 @@ const BookingModal = ({ isOpen, onClose, courseTitle }) => {
       });
 
       if (response.ok) {
+        logActivity('BOOKING_REQUESTED', `${courseTitle} (${formData.venueType})`);
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);

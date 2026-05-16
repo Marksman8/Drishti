@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, register, forgotPassword, logout } from '../services/AuthService';
+import { login, register, forgotPassword, logout, loginWithGoogle } from '../services/AuthService';
+import { logActivity } from '../services/Activity';
 import './AuthPage.css';
 import Navbar from '../components/Navbar';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import PhoneVerification from '../components/PhoneVerification';
 import amritaBg from '../components/Amritacollege.jpg';
 
 const AuthPage = () => {
@@ -14,6 +17,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPhoneVerify, setShowPhoneVerify] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -39,20 +43,43 @@ const AuthPage = () => {
         setIsRegistering(false);
       } else {
         const result = await login({ email, password });
-        const userRole = result?.user?.role;
-        if (userRole !== role) {
-          logout();
-          alert(
-            userRole === 'ADMIN'
-              ? 'Admin accounts must log in through the admin portal.'
-              : `This account is registered as ${userRole?.toLowerCase()}. Use the ${userRole?.toLowerCase()} login form.`
-          );
-          return;
-        }
-        navigate('/course');
+        finishAuth(result, role);
       }
     } catch (error) {
       alert(error.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Shared post-login handling for both password and Google sign-in.
+  const finishAuth = (result, expectedRole) => {
+    const userRole = result?.user?.role;
+    if (userRole !== expectedRole) {
+      logout();
+      alert(
+        userRole === 'ADMIN'
+          ? 'Admin accounts must log in through the admin portal.'
+          : `This account is registered as ${userRole?.toLowerCase()}. Use the ${userRole?.toLowerCase()} login form.`
+      );
+      return;
+    }
+    logActivity('LOGIN', `${userRole} signed in`);
+    if (result?.phoneVerificationRequired) {
+      setShowPhoneVerify(true);
+      return;
+    }
+    navigate('/course');
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    const role = isSchoolMode ? 'INSTITUTION' : 'STUDENT';
+    setLoading(true);
+    try {
+      const result = await loginWithGoogle(credential, role);
+      finishAuth(result, role);
+    } catch (error) {
+      alert(error.message || 'Google sign-in failed');
     } finally {
       setLoading(false);
     }
@@ -126,6 +153,13 @@ const AuthPage = () => {
                     {loading ? "PROCESSING..." : (isRegistering ? "SIGN UP" : "LOG IN")}
                 </button>
 
+                <div className="flex items-center gap-3 my-4 w-full">
+                  <div className="flex-1 h-px bg-gray-300" />
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">or</span>
+                  <div className="flex-1 h-px bg-gray-300" />
+                </div>
+                <GoogleSignInButton onCredential={handleGoogleCredential} />
+
                 {!isRegistering && (
                   <p
                     className="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]"
@@ -167,6 +201,13 @@ const AuthPage = () => {
                     {loading ? "PROCESSING..." : (isRegistering ? "REGISTER" : "LOG IN")}
                 </button>
 
+                <div className="flex items-center gap-3 my-4 w-full">
+                  <div className="flex-1 h-px bg-gray-300" />
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">or</span>
+                  <div className="flex-1 h-px bg-gray-300" />
+                </div>
+                <GoogleSignInButton onCredential={handleGoogleCredential} />
+
                 {!isRegistering && (
                   <p
                     className="mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-[#032b7a]"
@@ -204,6 +245,15 @@ const AuthPage = () => {
           </div>
         </div>
       </div>
+
+      {showPhoneVerify && (
+        <PhoneVerification
+          onVerified={() => {
+            setShowPhoneVerify(false);
+            navigate('/course');
+          }}
+        />
+      )}
     </div>
   );
 };

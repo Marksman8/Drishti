@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../config/api';
 import { getViewAs, setViewAs } from '../services/AuthService';
+import { logActivity } from '../services/Activity';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -22,6 +23,20 @@ const AdminDashboard = () => {
 
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [adminMessage, setAdminMessage] = useState("");
+  const [activity, setActivity] = useState([]);
+
+  const fetchActivity = async () => {
+    try {
+      const resp = await apiFetch('/api/activity?limit=200');
+      if (resp.ok) setActivity(await resp.json());
+    } catch (err) {
+      console.error("Failed to fetch activity log", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'ACTIVITY') fetchActivity();
+  }, [activeTab]);
 
   useEffect(() => {
     fetchInitialData();
@@ -90,6 +105,7 @@ const AdminDashboard = () => {
     });
     if (response.ok) {
       alert("Request Approved!");
+      logActivity('BOOKING_APPROVED', `Booking #${id}`);
       fetchPendingRequests();
       setSelectedRequestId(null);
       setAdminMessage("");
@@ -101,6 +117,7 @@ const AdminDashboard = () => {
     const response = await apiFetch(`/api/bookings/reject/${id}`, { method: 'PATCH' });
     if (response.ok) {
       alert("Request Rejected!");
+      logActivity('BOOKING_REJECTED', `Booking #${id}`);
       fetchPendingRequests();
       setSelectedRequestId(null);
     }
@@ -113,6 +130,7 @@ const AdminDashboard = () => {
     });
     if (response.ok) {
       alert("Request set to Processing!");
+      logActivity('BOOKING_PROCESSING', `Booking #${id}`);
       fetchPendingRequests();
     }
   };
@@ -133,6 +151,7 @@ const AdminDashboard = () => {
           <TabButton active={activeTab === "REQUESTS"} onClick={() => setActiveTab("REQUESTS")} icon="📅" label="School Requests" />
           <TabButton active={activeTab === "SLOTS"} onClick={() => setActiveTab("SLOTS")} icon="⚡" label="Online Slots" />
           <TabButton active={activeTab === "COURSES"} onClick={() => setActiveTab("COURSES")} icon="🎓" label="Manage Courses" />
+          <TabButton active={activeTab === "ACTIVITY"} onClick={() => setActiveTab("ACTIVITY")} icon="📊" label="Activity Log" />
         </nav>
 
         {/* View As switcher - admin-only tool for previewing the app */}
@@ -277,6 +296,57 @@ const AdminDashboard = () => {
                     <span className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase bg-blue-100 text-blue-700">{course.type}</span>
                  </div>
                ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "ACTIVITY" && (
+          <div className="animate-in fade-in duration-500">
+            <div className="flex justify-between items-center mb-10">
+              <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight">User Activity Log</h1>
+              <button
+                onClick={fetchActivity}
+                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 transition-all"
+              >
+                Refresh
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mb-6 font-bold uppercase tracking-widest">
+              Only users who accepted analytics cookies are tracked.
+            </p>
+            <div className="overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 font-black text-[10px] uppercase text-slate-400">
+                  <tr>
+                    <th className="p-5">When</th>
+                    <th className="p-5">User</th>
+                    <th className="p-5">Role</th>
+                    <th className="p-5">Action</th>
+                    <th className="p-5">Detail</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-sm">
+                  {activity.length === 0 ? (
+                    <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic">No activity recorded yet.</td></tr>
+                  ) : (
+                    activity.map(a => (
+                      <tr key={a.id}>
+                        <td className="p-5 text-xs text-slate-500 whitespace-nowrap">
+                          {a.createdAt ? new Date(a.createdAt).toLocaleString() : '-'}
+                        </td>
+                        <td className="p-5 text-xs font-bold text-slate-700">{a.userEmail || '-'}</td>
+                        <td className="p-5">
+                          <span className="text-[9px] font-black px-2 py-1 rounded-full uppercase bg-blue-100 text-blue-700">
+                            {a.userRole || '-'}
+                          </span>
+                        </td>
+                        <td className="p-5 text-xs font-black text-slate-900 uppercase">{a.action}</td>
+                        <td className="p-5 text-xs text-slate-500">{a.detail || '-'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

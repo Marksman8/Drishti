@@ -30,6 +30,10 @@ public class DevAdminSeeder {
                     existing.setEmailVerified(true);
                     changed = true;
                 }
+                if (!existing.isPhoneVerified()) {
+                    existing.setPhoneVerified(true);
+                    changed = true;
+                }
                 if (changed) {
                     userRepository.save(existing);
                     log.info("Updated dev admin account: {}", ADMIN_EMAIL);
@@ -42,6 +46,8 @@ public class DevAdminSeeder {
                 admin.setFullName(ADMIN_NAME);
                 admin.setRole("ADMIN");
                 admin.setEmailVerified(true);
+                admin.setPhoneVerified(true);
+                admin.setAuthProvider("LOCAL");
                 userRepository.save(admin);
                 log.info("Seeded dev admin account: {}", ADMIN_EMAIL);
             }

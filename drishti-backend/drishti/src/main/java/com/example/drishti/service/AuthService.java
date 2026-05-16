@@ -76,6 +76,7 @@ public class AuthService {
         return AuthResponse.builder()
                 .token(token)
                 .user(AuthResponse.UserPayload.from(user))
+                .phoneVerificationRequired(!user.isPhoneVerified())
                 .build();
     }
 

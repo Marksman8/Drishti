@@ -33,6 +33,15 @@ public class User {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "phone_verified", nullable = false)
+    private boolean phoneVerified = false;
+
+    @Column(name = "auth_provider")
+    private String authProvider; // "LOCAL" or "GOOGLE"
+
     @JsonIgnore
     @Column(name = "verification_token")
     private String verificationToken;

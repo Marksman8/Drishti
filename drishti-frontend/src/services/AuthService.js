@@ -91,6 +91,39 @@ export async function login({ email, password }) {
   return data;
 }
 
+export async function loginWithGoogle(credential, role) {
+  const data = await jsonFetch('/api/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential, role })
+  });
+  persist(data.token, data.user);
+  return data;
+}
+
+export async function sendPhoneOtp(phoneNumber) {
+  return jsonFetch('/api/auth/phone/send-otp', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: JSON.stringify({ phoneNumber })
+  });
+}
+
+export async function verifyPhoneOtp(otp) {
+  const res = await jsonFetch('/api/auth/phone/verify-otp', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: JSON.stringify({ otp })
+  });
+  // Reflect verified phone in the stored user object.
+  const user = getUser();
+  if (user) {
+    user.phoneVerified = true;
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    notify();
+  }
+  return res;
+}
+
 export async function verifyEmail(token) {
   return jsonFetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
 }
