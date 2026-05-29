@@ -1,0 +1,81 @@
+# Render Blueprint — defines the Spring Boot backend and Python AI service.
+# Connect your repo at https://dashboard.render.com/blueprints
+# Frontend is deployed separately to Vercel (see DEPLOY.md).
+#
+# IMPORTANT: secret env vars marked `sync: false` must be filled in via the
+# Render dashboard after the services are created — do NOT commit them here.
+
+services:
+  # ----------------------------------------------------------
+  # Spring Boot backend
+  # ----------------------------------------------------------
+  - type: web
+    name: drishti-backend
+    runtime: docker
+    rootDir: drishti-backend/drishti
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/public/health
+    autoDeploy: true
+    envVars:
+      # --- NeonDB (paste your real values in the Render dashboard) ---
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # --- JWT secret (32+ chars) ---
+      - key: JWT_SECRET
+        generateValue: true
+
+      # --- App URLs (set to your Vercel domain once you have it) ---
+      - key: APP_CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+      # --- Google Sign-In ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      # --- Phone OTP ---
+      - key: REQUIRE_EMAIL_VERIFIED
+        value: "false"
+      - key: PHONE_DEV_RETURN_OTP
+        value: "true"
+      - key: PHONE_ADMIN_OTP
+        value: "000000"
+
+      # --- AI chat proxy ---
+      - key: CHAT_API_URL
+        sync: false
+
+      # --- Optional SMTP (leave blank to disable real emails) ---
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
+  # ----------------------------------------------------------
+  # Python AI assistant
+  # ----------------------------------------------------------
+  - type: web
+    name: drishti-ai
+    runtime: python
+    rootDir: drishti-ai
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: meta/llama-3.3-70b-instruct
