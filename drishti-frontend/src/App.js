@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import CourseSelection from './pages/CourseSelection';
+import CourseDetail from './pages/CourseDetail';
 import QuizPage from './pages/QuizPage';
 import JoinBatch from './pages/JoinBatch';
 import AdminDashboard from './pages/AdminDashboard';
@@ -31,6 +32,7 @@ const AppContent = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/course" element={<CourseSelection />} />
+          <Route path="/course/:id" element={<CourseDetail />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/join" element={<JoinBatch />} />
           <Route

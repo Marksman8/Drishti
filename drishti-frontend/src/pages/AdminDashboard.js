@@ -25,6 +25,82 @@ const AdminDashboard = () => {
   const [adminMessage, setAdminMessage] = useState("");
   const [activity, setActivity] = useState([]);
 
+  const emptyCourse = {
+    id: null, title: '', type: 'General', professor: '', duration: '',
+    videoUrl: '', syllabus: '', description: '', studentInfo: '', institutionInfo: ''
+  };
+  const [courseDraft, setCourseDraft] = useState(emptyCourse);
+  const [savingCourse, setSavingCourse] = useState(false);
+
+  const setDraftField = (field, value) => setCourseDraft(d => ({ ...d, [field]: value }));
+
+  const refreshCourses = async () => {
+    try {
+      const resp = await apiFetch('/api/courses');
+      if (resp.ok) setExistingCourses(await resp.json());
+    } catch (err) {
+      console.error('Failed to refresh courses', err);
+    }
+  };
+
+  const saveCourse = async (e) => {
+    e.preventDefault();
+    if (!courseDraft.title.trim()) {
+      alert('Title is required.');
+      return;
+    }
+    setSavingCourse(true);
+    try {
+      const isEdit = !!courseDraft.id;
+      const resp = await apiFetch(
+        isEdit ? `/api/courses/${courseDraft.id}` : '/api/courses',
+        { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(courseDraft) }
+      );
+      if (!resp.ok) {
+        const body = await resp.text();
+        alert(`Save failed (${resp.status}): ${body}`);
+        return;
+      }
+      logActivity(isEdit ? 'COURSE_UPDATED' : 'COURSE_CREATED', courseDraft.title);
+      setCourseDraft(emptyCourse);
+      await refreshCourses();
+    } catch (err) {
+      console.error(err);
+      alert('Save failed: ' + err.message);
+    } finally {
+      setSavingCourse(false);
+    }
+  };
+
+  const editCourse = (c) => {
+    setCourseDraft({
+      id: c.id,
+      title: c.title || '',
+      type: c.type || 'General',
+      professor: c.professor || '',
+      duration: c.duration || '',
+      videoUrl: c.videoUrl || '',
+      syllabus: c.syllabus || '',
+      description: c.description || '',
+      studentInfo: c.studentInfo || '',
+      institutionInfo: c.institutionInfo || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const deleteCourse = async (id) => {
+    const target = existingCourses.find(c => c.id === id);
+    if (!window.confirm(`Delete "${target?.title}"? This cannot be undone.`)) return;
+    const resp = await apiFetch(`/api/courses/${id}`, { method: 'DELETE' });
+    if (resp.ok) {
+      logActivity('COURSE_DELETED', target?.title || `#${id}`);
+      if (courseDraft.id === id) setCourseDraft(emptyCourse);
+      await refreshCourses();
+    } else {
+      alert('Delete failed');
+    }
+  };
+
   const fetchActivity = async () => {
     try {
       const resp = await apiFetch('/api/activity?limit=200');
@@ -285,18 +361,150 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === "COURSES" && (
-          <div className="animate-in slide-in-from-right-8 duration-500">
-            <div className="flex justify-between items-center mb-12">
-              <h1 className="text-4xl font-black text-slate-900 uppercase">Course Catalog</h1>
+          <div>
+            <div className="flex justify-between items-center mb-10">
+              <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight">Course Catalog</h1>
+              {courseDraft.id && (
+                <button
+                  onClick={() => setCourseDraft(emptyCourse)}
+                  className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-900"
+                >
+                  + New course (clear form)
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               {existingCourses.map(course => (
-                 <div key={course.id} className="bg-white p-8 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm">
-                    <div><p className="font-black text-slate-900 text-lg">{course.title}</p><p className="text-xs text-slate-400 font-bold uppercase mt-1">Lead: {course.professor}</p></div>
-                    <span className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase bg-blue-100 text-blue-700">{course.type}</span>
-                 </div>
-               ))}
-            </div>
+
+            <form onSubmit={saveCourse} className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 mb-12 space-y-5">
+              <h2 className="text-lg font-black uppercase tracking-tight text-slate-900 mb-2">
+                {courseDraft.id ? `Editing: ${courseDraft.title || 'Untitled'}` : 'Create a new course'}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field label="Title *" value={courseDraft.title} onChange={v => setDraftField('title', v)} />
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-2">Type</label>
+                  <select
+                    value={courseDraft.type}
+                    onChange={e => setDraftField('type', e.target.value)}
+                    className="w-full bg-slate-50 p-4 rounded-2xl outline-none font-bold"
+                  >
+                    <option value="General">General</option>
+                    <option value="Specialised">Specialised</option>
+                  </select>
+                </div>
+                <Field label="Lead Instructor" value={courseDraft.professor} onChange={v => setDraftField('professor', v)} />
+                <Field label="Duration" placeholder="e.g. 8 weeks / 2nd & 4th Sat" value={courseDraft.duration} onChange={v => setDraftField('duration', v)} />
+                <div className="md:col-span-2">
+                  <Field
+                    label="Video URL (YouTube, Vimeo, or .mp4)"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={courseDraft.videoUrl}
+                    onChange={v => setDraftField('videoUrl', v)}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Field
+                    label="Syllabus highlights (comma-separated)"
+                    placeholder="GST Filing, Tally, Audit Prep"
+                    value={courseDraft.syllabus}
+                    onChange={v => setDraftField('syllabus', v)}
+                  />
+                </div>
+              </div>
+
+              <TextArea
+                label="Course description"
+                value={courseDraft.description}
+                onChange={v => setDraftField('description', v)}
+                rows={3}
+                placeholder="Overview of what this course covers."
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <TextArea
+                  label="What students will do / learn"
+                  value={courseDraft.studentInfo}
+                  onChange={v => setDraftField('studentInfo', v)}
+                  rows={5}
+                  placeholder="Shown on the course page for student users."
+                />
+                <TextArea
+                  label="What institutions will do / get"
+                  value={courseDraft.institutionInfo}
+                  onChange={v => setDraftField('institutionInfo', v)}
+                  rows={5}
+                  placeholder="Shown on the course page for institution users."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={savingCourse}
+                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all disabled:opacity-50"
+                >
+                  {savingCourse ? 'Saving…' : (courseDraft.id ? 'Save Changes' : 'Create Course')}
+                </button>
+                {courseDraft.id && (
+                  <button
+                    type="button"
+                    onClick={() => setCourseDraft(emptyCourse)}
+                    className="bg-slate-100 text-slate-700 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-200"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <h2 className="text-xl font-black uppercase tracking-tight text-slate-700 mb-5">
+              Existing courses ({existingCourses.length})
+            </h2>
+            {existingCourses.length === 0 ? (
+              <div className="bg-white/60 border border-dashed border-slate-200 p-12 rounded-[2rem] text-center text-slate-400 italic">
+                No courses yet. Use the form above to publish your first one.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {existingCourses.map(course => (
+                  <div key={course.id} className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm">
+                    <div className="flex justify-between items-start gap-3 mb-3">
+                      <div>
+                        <p className="font-black text-slate-900 text-lg">{course.title}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest">
+                          Lead: {course.professor || '—'} · {course.duration || 'No duration'}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                        (course.type || '').toLowerCase() === 'specialised'
+                          ? 'bg-pink-100 text-pink-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>{course.type || 'General'}</span>
+                    </div>
+                    {course.description && (
+                      <p className="text-xs text-slate-500 line-clamp-2 mb-4">{course.description}</p>
+                    )}
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${course.videoUrl ? 'text-green-600' : 'text-slate-400'}`}>
+                        {course.videoUrl ? '✓ Video uploaded' : 'No video'}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => editCourse(course)}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteCourse(course.id)}
+                          className="px-4 py-2 bg-red-50 text-red-700 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -372,6 +580,32 @@ const Input = ({ label, type = "text", placeholder, onChange }) => (
   <div>
     <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-2">{label}</label>
     <input type={type} placeholder={placeholder} className="w-full bg-slate-50 p-4 rounded-2xl outline-none font-bold" onChange={e => onChange(e.target.value)} />
+  </div>
+);
+
+const Field = ({ label, value, onChange, placeholder, type = 'text' }) => (
+  <div>
+    <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-2">{label}</label>
+    <input
+      type={type}
+      value={value}
+      placeholder={placeholder}
+      onChange={e => onChange(e.target.value)}
+      className="w-full bg-slate-50 p-4 rounded-2xl outline-none font-bold"
+    />
+  </div>
+);
+
+const TextArea = ({ label, value, onChange, placeholder, rows = 3 }) => (
+  <div>
+    <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-2">{label}</label>
+    <textarea
+      value={value}
+      placeholder={placeholder}
+      rows={rows}
+      onChange={e => onChange(e.target.value)}
+      className="w-full bg-slate-50 p-4 rounded-2xl outline-none font-medium resize-y"
+    />
   </div>
 );
 

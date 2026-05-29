@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { Link } from 'react-router-dom';
 import ReviewCard from '../components/ReviewCard';
+import HomeAuthForm from '../components/HomeAuthForm';
 
 const LandingPage = () => {
   // Intersection Observer for the smooth reveal animations
@@ -77,26 +78,13 @@ const LandingPage = () => {
           </div>
 
           <p className="text-blue-100/60 text-lg font-medium">
-            Are you already member? <Link to="/login" className="underline font-bold text-[#f4b41a] hover:text-white transition">Log in</Link>
+            Browse 100+ commerce courses. <span className="text-[#f4b41a] font-bold">Sign in on the right</span> to begin.
           </p>
         </div>
 
-        {/* Right Side: Visual Collage */}
-        <div className="grid grid-cols-3 grid-rows-3 gap-4 h-[550px] animate-on-scroll slide-up relative z-10" style={{ transitionDelay: '200ms' }}>
-          <div className="bg-[#f4b41a] rounded-full scale-90 shadow-[0_0_30px_rgba(244,180,26,0.2)]"></div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/10"></div>
-          <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/10"><img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400" className="object-cover h-full w-full grayscale hover:grayscale-0 transition duration-500" alt="Commerce"/></div>
-          <div className="col-span-2 bg-white/5 rounded-2xl overflow-hidden relative group border border-white/10">
-            <img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600" className="object-cover h-full w-full opacity-60 group-hover:scale-105 group-hover:opacity-100 transition duration-700" alt="Management"/>
-            <div className="absolute top-4 left-4 bg-[#f4b41a] text-[#032b7a] px-4 py-1 font-black -rotate-2 text-xs">COMMERCE</div>
-          </div>
-          <div className="bg-pink-500/20 rounded-full scale-75 blur-sm"></div>
-          <div className="bg-cyan-400/20 rounded-full scale-95 border border-cyan-400/30"></div>
-          <div className="bg-white/5 rounded-br-[80px] rounded-tl-2xl border border-white/10"></div>
-          <div className="bg-white/5 rounded-2xl overflow-hidden relative border border-white/10">
-            <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400" className="object-cover h-full w-full opacity-40" alt="Accounting"/>
-            <div className="absolute bottom-4 left-4 text-[#f4b41a] text-[10px] font-black uppercase tracking-[0.2em]">Finance</div>
-          </div>
+        {/* Right Side: Login / Register form */}
+        <div className="animate-on-scroll slide-up relative z-10" style={{ transitionDelay: '200ms' }}>
+          <HomeAuthForm />
         </div>
       </main>
 

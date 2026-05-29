@@ -108,15 +108,7 @@ const Navbar = () => {
               Logout
             </button>
           </div>
-        ) : (
-          /* Original Login Button */
-          <Link
-            to="/login"
-            className="bg-[#facc15] text-[#0f172a] px-8 py-2.5 rounded-full font-black hover:bg-white transition-all shadow-lg active:scale-95 text-[11px] uppercase tracking-widest"
-          >
-            Login / Register
-          </Link>
-        )}
+        ) : null /* Login/Register lives on the home page form */}
       </div>
     </nav>
   );
